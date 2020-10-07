@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-Move::Move(int startx, int starty, int destx, int desty, std::string board[8][8]){
+void Move::SetMove(int startx, int starty, int destx, int desty) {
 	this->startx = startx;
 	this->starty = starty;
 	this->destx = destx;
@@ -12,11 +12,12 @@ Move::Move(int startx, int starty, int destx, int desty, std::string board[8][8]
 }
 
 void Move::MakeMove(std::string board[8][8]) {
-	if (board[starty][startx] == "--")
+	if (board[startx][starty] == "--")
 		return;
-	std::string pieceMoved = board[starty][startx];
-	board[starty][startx] = "--";
-	board[desty][destx] = pieceMoved;
+	pieceMoved = board[startx][starty];
+	pieceCaptured = board[destx][desty];
+	board[startx][starty] = "--";
+	board[destx][desty] = pieceMoved;
 	std::cout << pieceMoved << " from " << startx << ", " << starty << " to " << destx << ", " << desty << std::endl;
 }
 

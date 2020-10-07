@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_keyboard.h>
 #include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_mouse.h>
 #include <SDL2/SDL_render.h>
@@ -80,7 +81,10 @@ void ChessRenderer::KeyHandler(){
             switch(event.key.keysym.sym){
                 case SDLK_ESCAPE:
                     running = false;
-                        break;
+                    break;
+                case SDLK_z:
+                	engine->UndoMove();
+                	break;
                 default:
                     break;
                 }
@@ -93,6 +97,11 @@ void ChessRenderer::KeyHandler(){
 // Updates everything that needs to be done, will call methods to move pieces if need be
 void ChessRenderer::Update(){
     this->KeyHandler();
+    if (engine->whiteMove) {
+    	SDL_SetWindowTitle(window, "White move");
+    } else {
+    	SDL_SetWindowTitle(window, "Black move");
+    }
 }
 
 // Renders everything to the window
@@ -123,18 +132,18 @@ void ChessRenderer::RenderBoard(){
 // Renders the pieces
 void ChessRenderer::RenderPieces(){
     SDL_Rect destRect;
-    std::string path = "/home/nathan/C++/ChessGame/src/assets/";
+    std::string path = "assets/";
     destRect.h = sqSize;
     destRect.w = sqSize;
     for (int r = 0; r < DIMENTION; r++){
         for (int c = 0; c < DIMENTION; c++){
-            if(engine->board[r][c] == "--"){
+            if(engine->GetPiece(c, r) == "--"){
                 continue;
             }
-            std::string fullPath = path + engine->board[r][c] + ".png";
+            std::string fullPath = path + engine->GetPiece(c, r) + ".png";
             SDL_Texture *pieceImg = IMG_LoadTexture(renderer, fullPath.c_str());
             if(pieceImg == nullptr){
-                std::cout << "Unable to load image at" << fullPath << ", ABORTING\n";
+                std::cout << "Unable to load image at " << fullPath << ", ABORTING\n";
                 running = false;
             }
             destRect.x = c * sqSize;
