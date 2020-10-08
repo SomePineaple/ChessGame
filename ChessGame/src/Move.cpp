@@ -8,7 +8,7 @@ void Move::SetMove(int startx, int starty, int destx, int desty) {
 	this->destx = destx;
 	this->desty = desty;
 
-	hash = startx * 1000 + starty * 100 + destx * 10 + desty;
+	hash = starty * 1000 + startx * 100 + desty * 10 + destx;
 }
 
 void Move::MakeMove(std::string board[8][8]) {

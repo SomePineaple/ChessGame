@@ -26,8 +26,15 @@ public:
 private:
     std::list<Move> GetValidMoves();
     std::list<Move> GetAllMoves();
+
+    bool InCheck();
+
     void GetPawnMoves(int r, int c, std::list<Move> &movelist);
     void GetRookMoves(int r, int c, std::list<Move> &movelist);
+    void GetBishopMoves(int r, int c, std::list<Move> &movelist);
+    void GetKnightMoves(int r, int c, std::list<Move> &movelist);
+    void GetQueenMoves(int r, int c, std::list<Move> &movelist);
+    void GetKingMoves(int r, int c, std::list<Move> &movelist);
 
     std::list<Move> completedMoves;
 

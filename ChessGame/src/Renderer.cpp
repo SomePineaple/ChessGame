@@ -16,7 +16,7 @@
 ChessRenderer::ChessRenderer(int width, int height){
     running = true;
     sqSize = width / DIMENTION;
-    //Init SDL, the window and the renderer
+    // Init SDL, the window and the renderer
     if (SDL_Init(SDL_INIT_EVERYTHING) == 0){
         std::cout << "SDL Initialized\n";
         window = SDL_CreateWindow("Simple chess game", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
