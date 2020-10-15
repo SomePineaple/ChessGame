@@ -16,8 +16,6 @@ public:
     void Render();
     void Update();
     void KeyHandler();
-    void RenderPieces();
-    void RenderBoard();
     int Quit();
 
     bool running;
@@ -27,6 +25,10 @@ private:
     SDL_Renderer *renderer;
 
     Engine *engine;
+
+    void RenderPieces();
+    void RenderBoard();
+    void RenderCheckMateBoard();
 
     const int DIMENTION = 8;
     int sqSize;

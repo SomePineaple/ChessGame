@@ -8,13 +8,15 @@
 
 class Engine {
 public:
-	bool whiteMove = true;
-
 	const char WHITE = 'w';
 	const char BLACK = 'b';
 
-    Engine();
-    ~Engine();
+	Engine();
+	~Engine();
+
+	bool checkMate = false;
+
+	bool whiteMove = true;
     void MakeMove(int startx, int starty, int destx, int desty);
 
     void UndoMove();
@@ -23,11 +25,22 @@ public:
 
     std::string GetPiece(int x, int y);
 
-private:
     std::list<Move> GetValidMoves();
-    std::list<Move> GetAllMoves();
+	std::list<Move> GetAllMoves();
 
-    bool InCheck();
+	bool InCheck();
+
+	bool IsKingAttacked(bool white);
+
+private:
+    std::list<int> whiteKingLoc = {0, 4};
+    std::list<int> blackKingLoc = {7, 4};
+    bool hasWhiteKingMoved = false;
+    bool hasBlackKingMoved = false;
+    bool hasWhiteLeftRookMoved = false;
+    bool hasWhiteRightRookMoved = false;
+    bool hasBlackLeftRookMoved = false;
+    bool hasBlackRightRookMoved = false;
 
     void GetPawnMoves(int r, int c, std::list<Move> &movelist);
     void GetRookMoves(int r, int c, std::list<Move> &movelist);
@@ -35,6 +48,7 @@ private:
     void GetKnightMoves(int r, int c, std::list<Move> &movelist);
     void GetQueenMoves(int r, int c, std::list<Move> &movelist);
     void GetKingMoves(int r, int c, std::list<Move> &movelist);
+    void GetCastleMoves(int r, int c, std::list<Move> &movelist);
 
     std::list<Move> completedMoves;
 

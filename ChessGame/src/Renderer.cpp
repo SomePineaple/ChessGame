@@ -107,7 +107,10 @@ void ChessRenderer::Update(){
 // Renders everything to the window
 void ChessRenderer::Render(){
     SDL_RenderClear(renderer);
-    this->RenderBoard();
+    if (!engine->checkMate)
+    	this->RenderBoard();
+    else
+    	RenderCheckMateBoard();
     this->RenderPieces();
     SDL_RenderPresent(renderer);
 }
@@ -127,6 +130,23 @@ void ChessRenderer::RenderBoard(){
             SDL_RenderFillRect(renderer, &sqRect);
         }
     }
+}
+
+// Slightly different to render board, changes the colors of some things to let the players know the game is over
+void ChessRenderer::RenderCheckMateBoard() {
+	for (int r = 0; r < DIMENTION; r++){
+		for (int c = 0; c < DIMENTION; c++){
+			sqRect.x = c * sqSize;
+			sqRect.y = r * sqSize;
+			// Changes the color for every other square
+			if((r + c) % 2 == 1){
+				SDL_SetRenderDrawColor(renderer, 200, 100, 100, 255);
+			} else{
+				SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+			}
+			SDL_RenderFillRect(renderer, &sqRect);
+		}
+	}
 }
 
 // Renders the pieces

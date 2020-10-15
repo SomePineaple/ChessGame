@@ -1,5 +1,6 @@
 #include "Engine.h"
 
+#include <initializer_list>
 #include <iostream>
 
 using namespace std;
@@ -18,13 +19,23 @@ void Engine::MakeMove(int startx, int starty, int destx, int desty){
 
     // All this stuff is to check if the list possibleMoves contains the current move we want to do
     bool validMove = false;
+    bool useCastleMove = false;
 
     Move move;
-	move.SetMove(starty, startx, desty, destx);
+	move.SetMove(starty, startx, desty, destx, board);
+
+	CastleMove castleMove;
 
     for (Move possibleMove : possibleMoves) {
     	if (possibleMove == move) {
     		validMove = true;
+
+    		if (possibleMove.isCastleMove) {
+    			cout << "Was a castle move\n";
+    			useCastleMove = true;
+    			castleMove.SetMove(starty, startx, desty, destx, board);
+    			castleMove.color = whiteMove;
+    		}
     	}
     }
 
@@ -35,7 +46,10 @@ void Engine::MakeMove(int startx, int starty, int destx, int desty){
     }
 
     // If it was a valid move, we can now make that move
-    move.MakeMove(board);
+    if (!useCastleMove)
+    	move.MakeMove(board);
+    else
+    	castleMove.MakeMove(board);
 
     // Pawn promotion
     if (move.pieceMoved == "wP" && desty == 0) {
@@ -46,14 +60,95 @@ void Engine::MakeMove(int startx, int starty, int destx, int desty){
     	SetPiece(destx, desty, "bQ");
     }
 
-    completedMoves.push_back(move);
+    // Updating kings location
+    else if (move.pieceMoved == "wK") {
+    	whiteKingLoc = {desty, destx};
+    	hasWhiteKingMoved = true;
+    } else if (move.pieceMoved == "bK") {
+    	blackKingLoc = {desty, destx};
+    	hasBlackKingMoved = true;
+    }
+
+    // Making sure the rooks havn't moved, needed for castling
+    else if (move.pieceMoved == "wR" && move.starty == 0) {
+    	hasWhiteLeftRookMoved = true;
+    } else if (move.pieceMoved == "wR" && move.starty == 7) {
+    	hasWhiteRightRookMoved = true;
+    } else if (move.pieceMoved == "bR" && move.starty == 0) {
+    	hasBlackLeftRookMoved = true;
+    } else if (move.pieceMoved == "bR" && move.starty == 7) {
+    	hasBlackRightRookMoved = true;
+    }
+
+    cout << move.pieceMoved << " to " << destx << " " << desty << endl;
+
+    if (!useCastleMove)
+    	completedMoves.push_back(move);
+    else
+    	completedMoves.push_back(castleMove);
 
     whiteMove = !whiteMove;
+
+    // Just to update the check and checkmate variables
+    GetValidMoves();
 }
 
 // Will check for moves that can't be completed because of check and stuff like that
 list<Move> Engine::GetValidMoves(){
-	return GetAllMoves();
+	list<Move> allMoves = GetAllMoves();
+	list<Move> badMoves;
+
+	// Set checkmate to true, so if it doesn't get set back to false, we know that there is a checkmate
+	checkMate = true;
+
+	// For all the moves, make them, if the player is in check, add that move to the list of bad moves
+	for (Move m : allMoves) {
+		bool check;
+		m.MakeMove(board);
+		completedMoves.push_back(m);
+		check = InCheck();
+		whiteMove = !whiteMove;
+		UndoMove();
+		if (check) {
+			cout << "Check with move " << m.starty << m.startx << m.desty << m.destx << endl;
+			badMoves.push_back(m);
+		}
+		else
+			checkMate = false;
+	}
+
+	// Get rid of all the bad moves
+	for (Move m : badMoves)
+		allMoves.remove(m);
+
+	return allMoves;
+}
+
+bool Engine::InCheck() {
+	if (whiteMove) {
+		return IsKingAttacked(true);
+	} else {
+		return IsKingAttacked(false);
+	}
+}
+
+// Checks if a certain players king is in check
+bool Engine::IsKingAttacked(bool white) {
+	whiteMove = !whiteMove;
+
+	list<Move> movelist = GetAllMoves();
+
+	whiteMove = !whiteMove;
+
+	for (Move m : movelist) {
+		if (m.pieceCaptured == "wK" && white) {
+			return true;
+		} if (m.pieceCaptured == "bK" && !white) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 list<Move> Engine::GetAllMoves() {
@@ -87,6 +182,7 @@ list<Move> Engine::GetAllMoves() {
 					break;
 				case 'K':
 					GetKingMoves(r, c, movelist);
+					GetCastleMoves(r, c, movelist);
 					break;
 				default:
 					break;
@@ -102,27 +198,27 @@ void Engine::GetPawnMoves(int r, int c, list<Move> &movelist) {
 		// If the piece in front of the pawn is empty
 		if (GetPiece(c, r - 1) == "--") {
 			Move move;
-			move.SetMove(r, c, r - 1, c);
+			move.SetMove(r, c, r - 1, c, board);
 			movelist.push_back(move);
 
 			// A pawn can move two spaces on its first turn, which would be when its on row 6
 			if (r == 6 && GetPiece(c, r - 2) == "--") {
 				Move move2;
-				move2.SetMove(r, c, r - 2, c);
+				move2.SetMove(r, c, r - 2, c, board);
 				movelist.push_back(move2);
 			}
 		}
 
 		// Doing diagonal moves
-		if (GetPiece(c - 1, r - 1)[0] == BLACK) {
+		if (GetPiece(c - 1, r - 1)[0] == BLACK && c - 1 >= 0) {
 			Move move3;
-			move3.SetMove(r, c, r - 1, c - 1);
+			move3.SetMove(r, c, r - 1, c - 1, board);
 			movelist.push_back(move3);
 		}
 
-		if (GetPiece(c + 1, r - 1)[0] == BLACK) {
+		if (GetPiece(c + 1, r - 1)[0] == BLACK && c + 1 <= 7) {
 			Move move;
-			move.SetMove(r, c, r - 1, c + 1);
+			move.SetMove(r, c, r - 1, c + 1, board);
 			movelist.push_back(move);
 		}
 
@@ -130,24 +226,24 @@ void Engine::GetPawnMoves(int r, int c, list<Move> &movelist) {
 		// This is for black pawns, same thing as before, but going in the other direction
 		if (GetPiece(c, r + 1) == "--" && r + 1 <= 7) {
 			Move move;
-			move.SetMove(r, c, r + 1, c);
+			move.SetMove(r, c, r + 1, c, board);
 			movelist.push_back(move);
 			if (r == 1 && GetPiece(c, r + 2) == "--" && r + 2 <= 7) {
 				Move move2;
-				move2.SetMove(r, c, r + 2, c);
+				move2.SetMove(r, c, r + 2, c, board);
 				movelist.push_back(move2);
 			}
 		}
 
-		if (GetPiece(c - 1, r + 1)[0] == WHITE) {
+		if (GetPiece(c - 1, r + 1)[0] == WHITE && c - 1 >= 0) {
 			Move move;
-			move.SetMove(r, c, r + 1, c - 1);
+			move.SetMove(r, c, r + 1, c - 1, board);
 			movelist.push_back(move);
 		}
 
-		if (GetPiece(c + 1, r + 1)[0] == WHITE) {
+		if (GetPiece(c + 1, r + 1)[0] == WHITE && c + 1 <= 7) {
 			Move move;
-			move.SetMove(r, c, r + 1, c + 1);
+			move.SetMove(r, c, r + 1, c + 1, board);
 			movelist.push_back(move);
 		}
 	}
@@ -169,13 +265,13 @@ void Engine::GetRookMoves(int r, int c, list<Move> &movelist) {
 				if (endPiece == "--") {
 					// If there is an empty space, add it to the move list
 					Move move;
-					move.SetMove(r, c, endRow, endCol);
+					move.SetMove(r, c, endRow, endCol, board);
 					movelist.push_back(move);
 				} else if (endPiece[0] == enemyColor) {
 					// If there is an enemy, add that move to the move list, and then break,
 					// this break means don't go farther because you can't go through pieces
 					Move move;
-					move.SetMove(r, c, endRow, endCol);
+					move.SetMove(r, c, endRow, endCol, board);
 					movelist.push_back(move);
 					break;
 				} else {
@@ -200,7 +296,7 @@ void Engine::GetKnightMoves(int r, int c, list<Move> &movelist) {
 			string endPiece = GetPiece(endCol, endRow);
 			if (endPiece[0] != allyColor) {
 				Move move;
-				move.SetMove(r, c, endRow, endCol);
+				move.SetMove(r, c, endRow, endCol, board);
 				movelist.push_back(move);
 			}
 		}
@@ -220,11 +316,11 @@ void Engine::GetBishopMoves(int r, int c, list<Move> &movelist) {
 				string endPiece = GetPiece(endCol, endRow);
 				if (endPiece == "--") {
 					Move move;
-					move.SetMove(r, c, endRow, endCol);
+					move.SetMove(r, c, endRow, endCol, board);
 					movelist.push_back(move);
 				} else if (endPiece[0] == enemyColor) {
 					Move move;
-					move.SetMove(r, c, endRow, endCol);
+					move.SetMove(r, c, endRow, endCol, board);
 					movelist.push_back(move);
 					break;
 				} else {
@@ -250,11 +346,11 @@ void Engine::GetQueenMoves(int r, int c, std::list<Move> &movelist) {
 				string endPiece = GetPiece(endCol, endRow);
 				if (endPiece == "--") {
 					Move move;
-					move.SetMove(r, c, endRow, endCol);
+					move.SetMove(r, c, endRow, endCol, board);
 					movelist.push_back(move);
 				} else if (endPiece[0] == enemyColor) {
 					Move move;
-					move.SetMove(r, c, endRow, endCol);
+					move.SetMove(r, c, endRow, endCol, board);
 					movelist.push_back(move);
 					break;
 				} else {
@@ -279,10 +375,31 @@ void Engine::GetKingMoves(int r, int c, list<Move> &movelist) {
 			string endPiece = GetPiece(endCol, endRow);
 			if (endPiece[0] != allyColor) {
 				Move move;
-				move.SetMove(r, c, endRow, endCol);
+				move.SetMove(r, c, endRow, endCol, board);
 				movelist.push_back(move);
 			}
 		}
+	}
+}
+
+void Engine::GetCastleMoves(int r, int c, list<Move> &movelist) {
+	if (whiteMove && hasWhiteKingMoved)
+		return;
+	else if (!whiteMove && hasBlackKingMoved)
+		return;
+
+	if (GetPiece(3, r) == "--" && GetPiece(2, r) == "--" && GetPiece(1, r) == "--" && (whiteMove ? !hasWhiteLeftRookMoved : !hasBlackLeftRookMoved)) {
+		CastleMove move;
+		move.SetMove(r, c, r, 0, board);
+		move.color = whiteMove;
+		movelist.push_back(move);
+	}
+
+	if (GetPiece(5, r) == "--" && GetPiece(6, r) == "--" && (whiteMove ? !hasWhiteRightRookMoved : !hasBlackRightRookMoved)) {
+		CastleMove move;
+		move.SetMove(r, c, r, 7, board);
+		move.color = whiteMove;
+		movelist.push_back(move);
 	}
 }
 
@@ -292,15 +409,17 @@ void Engine::UndoMove() {
 
 	Move move = completedMoves.back();
 
-	SetPiece(move.desty, move.destx, move.pieceCaptured);
-	SetPiece(move.starty, move.startx, move.pieceMoved);
+	move.UndoMove(board);
+
+	if (move.pieceMoved == "wK")
+		whiteKingLoc = {move.starty, move.startx};
+
+	else if (move.pieceMoved == "bK")
+		blackKingLoc = {move.starty, move.startx};
 
 	completedMoves.pop_back();
 
 	whiteMove = !whiteMove;
-
-	if (!whiteMove)
-		UndoMove();
 }
 
 void Engine::SetPiece(int x, int y, std::string piece) {
